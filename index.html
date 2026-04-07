@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ôn Tập Pháp Luật Đại Cương</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+        h2 { color: #2c3e50; text-align: center; margin-bottom: 20px; }
+        
+        /* Màn hình cài đặt */
+        .setting-group {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .setting-group label {
+            font-size: 1.1em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .setting-group input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+        .setting-group input[type="number"] {
+            margin-top: 10px;
+            padding: 8px;
+            width: 100px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        
+        /* Màn hình thi */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f2f5;
+            padding-bottom: 10px;
+        }
+        .progress { font-size: 1.1em; font-weight: bold; color: #3498db; }
+        .timer { font-size: 1.1em; font-weight: bold; color: #e74c3c; }
+        .question { font-size: 1.2em; font-weight: bold; color: #2c3e50; margin-bottom: 20px; line-height: 1.5; }
+        .options { display: flex; flex-direction: column; gap: 10px; }
+        .option {
+            background: #f8f9fa; border: 2px solid #e9ecef; padding: 15px;
+            border-radius: 8px; cursor: pointer; transition: all 0.2s ease; font-size: 1em; color: #333;
+        }
+        .option:hover { background: #e2e6ea; border-color: #cbd3da; }
+        .correct { background: #2ecc71 !important; border-color: #27ae60 !important; color: white !important; pointer-events: none; }
+        .wrong { background: #e74c3c !important; border-color: #c0392b !important; color: white !important; pointer-events: none; }
+        .disabled { pointer-events: none; opacity: 0.8; }
+        
+        /* Nút bấm chung */
+        button {
+            background: #3498db; color: white; border: none; padding: 12px 20px;
+            border-radius: 5px; font-size: 1.1em; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold;
+        }
+        button:hover { background: #2980b9; }
+        
+        #quiz-box, #finish-screen { display: none; }
+        #finish-screen { text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="setup-screen">
+    <h2>Cài đặt bài ôn tập</h2>
+    
+    <div class="setting-group">
+        <label>
+            <input type="checkbox" id="shuffle-cb" checked>
+            Xáo trộn thứ tự câu hỏi
+        </label>
+    </div>
+
+    <div class="setting-group">
+        <label>
+            <input type="checkbox" id="timer-cb" onchange="toggleTimeInput()">
+            Bật tính năng hẹn giờ (đếm ngược)
+        </label>
+        <div id="time-input-container" style="display: none; margin-left: 28px;">
+            <input type="number" id="time-input" min="1" value="15" placeholder="Phút"> 
+            <span>phút</span>
+        </div>
+    </div>
+
+    <button onclick="startQuiz()">Bắt đầu ngay</button>
+</div>
+
+<div class="container" id="quiz-box">
+    <div class="header">
+        <div class="progress" id="progress">Câu: 1/50</div>
+        <div class="timer" id="timer">--:--</div>
+    </div>
+    <div class="question" id="question-text">Đang tải câu hỏi...</div>
+    <div class="options" id="options-container"></div>
+</div>
+
+<div class="container" id="finish-screen">
+    <h2 style="color: #2ecc71;">Đã hoàn thành bài ôn tập!</h2>
+    <p id="finish-message"></p>
+    <button onclick="location.reload()">Quay lại cài đặt</button>
+</div>
+
+<script>
+    // DÁN TOÀN BỘ 50 CÂU HỎI VÀO BIẾN NÀY (Bên dưới chỉ là 2 câu ví dụ để test form)
+    const database = [
+        // 10 câu đầu
+        { q: "Câu 1: Trong bộ máy Nhà nước CHXHCN Việt Nam thì Quốc hội là:", opts: ["Cơ quan có quyền lập hiến, lập pháp", "Cơ quan quyền lực Nhà nước cao nhất", "Cơ quan đại biểu cao nhất của nhân dân", "Tất cả đều đúng"], ans: 3 },
+        { q: "Câu 2: Hình thức chính thể chuyên chế quân chủ được hiểu như thế nào", opts: ["Vua (nữ hoàng) không có quyền lực mà chỉ là người đại diện về phương diện ngoại giao", "Quyền lực nhà nước được trao cho một cơ quan được thành lập theo chế độ bầu cử", "Bên cạnh nhà vua (nữ hoàng) có một cơ quan để hạn chế quyền lực", "Toàn bộ quyền lực nhà nước tập trung vào tay một người đứng đầu là vua hoặc nữ hoàng"], ans: 3 },
+        { q: "Câu 3: Theo Hiến pháp hiện hành, bản chất của Nhà nước Việt Nam là:", opts: ["Nhà nước pháp quyền XHCN", "Nhà nước của dân, do dân, vì dân", "Nhà nước pháp quyền XHCN, của dân, do dân và vì dân", "Nhà nước “kiểu mới”"], ans: 2 },
+        { q: "Câu 4: Thẩm quyền cho phép gia nhập quốc tịch, thôi quốc tịch, tước quốc tịch Việt Nam:", opts: ["Chủ tịch nước", "Thủ tướng Chính phủ", "Chủ tịch Quốc hội", "Chánh án Toà án nhân dân tối cao"], ans: 0 },
+        { q: "Câu 5: Uỷ ban thường vụ Quốc hội có quyền ban hành những loại văn bản quy phạm nào?", opts: ["Luật, nghị quyết", "Luật, pháp lệnh", "Pháp lệnh, nghị quyết", "Pháp lệnh, nghị quyết, nghị định"], ans: 2 },
+        { q: "Câu 6: Ở Việt Nam, cơ quan quyền lực cao nhất là:", opts: ["Chính phủ", "Quốc hội", "Toà án nhân dân", "Viện kiểm sát nhân dân"], ans: 1 },
+        { q: "Câu 7: “Chính phủ, Ủy ban nhân dân, bộ, sở” là cơ quan nhà nước thuộc nhóm:", opts: ["Cơ quan hành chính nhà nước", "Cơ quan xét xử", "Cơ quan quyền lực nhà nước", "Cơ quan kiểm sát"], ans: 0 },
+        { q: "Câu 8: Theo quan điểm của chủ nghĩa Mac Lenin thì nguyên nhân chủ yếu làm xuất hiện nhà nước là:", opts: ["Do ý chí của con người trong xã hội", "Do có sự phân công lao động trong xã hội", "Do có sự phân hoá giai cấp và đấu tranh giai cấp trong xã hội", "Do ý chí của Thượng đế"], ans: 2 },
+        { q: "Câu 9: Hình thái kinh tế - xã hội nào chưa có Nhà nước?", opts: ["Chiếm hữu nô lệ", "Tư bản chủ nghĩa", "Công xã nguyên thuỷ", "Cộng sản chủ nghĩa"], ans: 2 },
+        { q: "Câu 10: Cơ quan nào sau đây có chức năng quản lý hành chính nhà nước:", opts: ["Quốc hội", "Chính phủ", "Ủy ban nhân dân các cấp", "Cả B và C đều đúng"], ans: 3 },
+        
+        // 40 câu tiếp theo
+        { q: "Câu 11: Cơ quan hành chính nhà nước bao gồm:", opts: ["Quốc hội và Hội đồng nhân dân các cấp", "Toà án nhân dân và Việm kiểm sát nhân dân", "Chính phủ và Uỷ ban nhân dân các cấp", "Quốc hội và Chính phủ"], ans: 2 },
+        { q: "Câu 12: Lần phân công lao động xã hội đầu tiên trong xã hội cộng sản nguyên thuỷ:", opts: ["Nông nghiệp tách khỏi thủ công nghiệp", "Chăn nuôi tách khỏi trồng trọt", "Trao đổi tách khỏi sản xuất", "Chăn nuôi tách khỏi sản xuất"], ans: 1 },
+        { q: "Câu 13: Khẳng định nào sau đây là sai khi nghiên cứu về nguồn gốc Nhà nước:", opts: ["Nhà nước là hiện tượng xã hội mang tính lịch sử", "Nhà nước ra đời, tồn tại trong xã hội có giai cấp", "Nhà nước ra đời, tồn tại cùng với lịch sử xã hội loài người", "Thời kỳ xã hội loài người chưa có giai cấp thì Nhà nước chưa xuất hiện"], ans: 2 },
+        { q: "Câu 14: Chính phủ do:", opts: ["Nhân dân bầu ra", "Quốc hội bầu ra", "Đảng bầu ra", "Nhà nước bầu ra"], ans: 1 },
+        { q: "Câu 15: Theo Hiến pháp Việt Nam, Thủ tướng Chính phủ nước CH XHCN Việt Nam:", opts: ["Do nhân dân bầu", "Do Quốc hội bầu theo sự giới thiệu của Chủ tịch nước", "Do Chủ tịch Quốc hội bổ nhiệm", "Do Chính phủ bầu"], ans: 1 },
+        { q: "Câu 16: Hình thức Nhà nước Việt Nam dưới góc độ chính thể:", opts: ["Hình thức chính thể quân chủ hạn chế", "Hình thức chính thể cộng hoà dân chủ tư sản", "Hình thức chính thể cộng hoà dân chủ", "Hình thức chính thể cộng hoà lưỡng tính"], ans: 2 },
+        { q: "Câu 17: Nhà nước CHXHCN Việt Nam là:", opts: ["Nhà nước của giai cấp công nhân", "Nhà nước của nhân dân lao động", "Nhà nước mang bản chất giai cấp công nhân", "Cả A, B, C đều đúng"], ans: 2 },
+        { q: "Câu 18: Nhà nước ta là nhà nước của ai?", opts: ["Đảng", "Quốc hội", "Nhân dân", "Chính phủ"], ans: 2 },
+        { q: "Câu 19: Uỷ ban nhân dân được tổ chức ở cấp nào?", opts: ["Bốn cấp: Trung ương, tỉnh, huyện và xã", "Ba cấp: tỉnh, huyện và xã", "Hai cấp: tỉnh và xã", "Hai cấp: Trung ương và tỉnh"], ans: 1 },
+        { q: "Câu 20: Nhà nước Việt Nam dân chủ cộng hòa có chủ quyền quốc gia khi nào?", opts: ["Năm 1930", "Năm 1945", "Năm 1954", "Năm 1975"], ans: 1 },
+        { q: "Câu 21: Một trong những bản chất của nhà nước là:", opts: ["Nhà nước có chủ quyền quốc gia", "Đặt ra thuế và thu thuế dưới hình thức bắt buộc", "Tính xã hội", "Tất cả đều đúng"], ans: 2 },
+        { q: "Câu 22: Theo quy định của pháp luật Việt Nam thì Chính phủ là:", opts: ["Cơ quan chấp hành của Quốc hội", "Cơ quan hành chính nhà nước cao nhất cả nước", "A và B đều đúng", "Cơ quan hành pháp cao nhất của nước ta"], ans: 2 },
+        { q: "Câu 23: Chính phủ làm nhiệm vụ:", opts: ["Biểu quyết thông qua Hiến pháp, luật", "Tổ chức thi hành Hiến pháp, luật", "Xét xử những ai vi phạm Hiến pháp, luật", "Ban hành Hiến pháp, luật"], ans: 1 },
+        { q: "Câu 24: Theo Hiến pháp Việt Nam, Chủ tịch nước có quyền:", opts: ["Quyết định mọi vấn đề quan trọng của đất nước", "Lập hiến và lập pháp", "Thay mặt nhà nước để quyết định mọi vấn đề đối nội và đối ngoại", "Công bố Hiến pháp, luật và pháp lệnh"], ans: 3 },
+        { q: "Câu 25: Bộ Công thương là:", opts: ["Cơ quan quyền lực", "Cơ quan hành chính", "Cơ quan xét xử", "Cơ quan kiểm sát"], ans: 1 },
+        { q: "Câu 26: Hoạt động nào sau đây thuộc chức năng của Viện kiểm sát?", opts: ["Truy tố người phạm tội", "Xét xử", "Điều tra", "Cả ba hoạt động trên"], ans: 0 },
+        { q: "Câu 27: Hội đồng nhân nhân phường Long Bình là:", opts: ["Cơ quan quyền lực", "Cơ quan hành chính", "Cơ quan xét xử", "Cơ quan kiểm sát"], ans: 0 },
+        { q: "Câu 28: Theo quy định của pháp luật, nhiệm kỳ của Quốc hội Việt Nam là:", opts: ["3 năm", "4 năm", "5 năm", "6 năm"], ans: 2 },
+        { q: "Câu 29: Các nhà nước trong lịch sử có điểm giống nhau là gì?", opts: ["Đều dựa trên cơ sở chế độ tư hữu", "Đều dựa trên cơ sở chế độ công hữu", "Đều có Đảng lãnh đạo", "Đều mang bản chất giai cấp và bản chất xã hội"], ans: 3 },
+        { q: "Câu 30: Cơ quan thường trực của Quốc hội nước ta là:", opts: ["Uỷ ban kinh tế và ngân sách", "Uỷ ban thường vụ Quốc hội", "Uỷ ban Quốc hội", "Uỷ ban đối nội và đối ngoại"], ans: 1 },
+        { q: "Câu 31: Chủ thể nào sau đây không phải là cơ quan trong bộ máy Nhà nước?", opts: ["Thanh tra Bộ tài chính", "Ban chấp hành trung ương Đảng", "Thanh tra Chính phủ", "Thanh tra Ngân hàng Nhà nước"], ans: 1 },
+        { q: "Câu 32: Trong bộ máy nhà nước Việt Nam thì:", opts: ["Quốc hội có quyền ban hành tất cả các văn bản quy phạm pháp luật", "Chính phủ là cơ quan quyền lực nhà nước cao nhất", "Chính phủ là cơ quan chấp hành của Quốc hội", "Hội đồng nhân dân là cơ quan hành chính nhà nước ở địa phương"], ans: 2 },
+        { q: "Câu 33: Toà án nhân dân tỉnh Tây Ninh là:", opts: ["Cơ quan quyền lực", "Cơ quan hành chính", "Cơ quan xét xử", "Cơ quan kiểm sát"], ans: 2 },
+        { q: "Câu 34: Nhà nước cộng hoà xã hội chủ nghĩa Việt Nam có hình thức cấu trúc nhà nước nào", opts: ["Nhà nước liên bang", "Nhà nước liên minh", "Nhà nước “tự trị”", "Nhà nước đơn nhất"], ans: 3 },
+        { q: "Câu 35: Bộ máy Nhà nước CHXHCN Việt Nam gồm các loại cơ quan nào?", opts: ["Quốc hội, Chính phủ, cơ quan xét xử", "Cơ quan quyền lực, cơ quan quản lý nhà nước, cơ quan xét xử, cơ quan kiểm sát", "Cơ quan lập pháp, cơ quan hành pháp, cơ quan tư pháp", "Tất cả đều đúng"], ans: 1 },
+        { q: "Câu 36: Nhà nước xuất hiện đầu tiên trong tiến trình phát triển của xã hội loài người là:", opts: ["Nhà nước Tư sản", "Nhà nước Phong kiến", "Nhà nước Chủ nô", "Nhà nước Xã hội chủ nghĩa"], ans: 2 },
+        { q: "Câu 37: Uỷ ban nhân dân phường Long Bình là:", opts: ["Cơ quan quyền lực", "Cơ quan hành chính", "Cơ quan xét xử", "Cơ quan kiểm sát"], ans: 1 },
+        { q: "Câu 38: Quốc hội là cơ quan duy nhất có quyền lập hiến, lập pháp vì:", opts: ["Quốc hội là cơ quan quyết định những chính sách cơ bản về đối nội và đối ngoại", "Quốc hội là cơ quan quyền lực nhà nước cao nhất của nhà nước", "Quốc hội là cơ quan giám sát tối cao", "Cả A, B, C đều đúng"], ans: 1 },
+        { q: "Câu 39: Viện kiểm sát nhân dân Thành phố Hồ Chí Minh là:", opts: ["Cơ quan quyền lực", "Cơ quan hành chính", "Cơ quan xét xử", "Cơ quan kiểm sát"], ans: 3 },
+        { q: "Câu 40: Cục thuế Thành phố là:", opts: ["Cơ quan quyền lực", "Cơ quan hành chính", "Cơ quan xét xử", "Cơ quan kiểm sát"], ans: 1 },
+        { q: "Câu 41: Bộ máy Nhà nước Việt Nam bao gồm:", opts: ["Hệ thống cơ quan quyền lực nhà nước", "Hệ thống cơ quan xét xử và kiểm sát", "Hệ thống cơ quan hành chính Nhà nước", "Cả A, B, và C"], ans: 3 },
+        { q: "Câu 42: Chủ thể nào sau đây là người đứng đầu cơ quan thực hành quyền công tố?", opts: ["Chánh án Toà án Nhân dân tối cao", "Thủ tướng Chính phủ", "Chủ tịch nước", "Viện trưởng Viện kiểm sát Nhân dân tối cao"], ans: 3 },
+        { q: "Câu 43: Theo pháp luật Việt Nam hiện hành, chức năng của Viện kiểm sát nhân dân là:", opts: ["Công tố, luận tội", "Công tố, kiểm sát chung", "Công tố, kiểm sát hoạt động tư pháp", "Công tố, giám sát, kiểm tra"], ans: 2 },
+        { q: "Câu 44: Bản chất Nhà nước CHXHCN Việt Nam được thể hiện:", opts: ["Là Nhà nước của nhân dân, do nhân dân, vì nhân dân", "Tất cả quyền lực Nhà nước thuộc về nhân dân", "Nhân dân được kiểm tra, giám sát hoạt động của các cơ quan nhà nước", "Tất cả đều đúng"], ans: 3 },
+        { q: "Câu 45: Nhà nước tồn tại với mục đích gì?", opts: ["Bảo vệ lợi ích của giai cấp thống trị", "Duy trì trật tự và quản lý xã hội", "Bảo đảm sự thống trị của giai cấp này đối với giai cấp khác", "Cả A, B và C đều đúng"], ans: 3 },
+        { q: "Câu 46: Cơ quan nào trong bộ máy Nhà nước Việt Nam có quyền hành pháp?", opts: ["Quốc hội", "Chính phủ", "Toà án", "Viện kiểm sát"], ans: 1 },
+        { q: "Câu 47: Trong lịch sử loài người đã tồn tại mấy kiểu Nhà nước", opts: ["6", "5", "4", "3"], ans: 2 },
+        { q: "Câu 48: Cơ quan nào không thuộc Chính phủ:", opts: ["Bộ", "Uỷ ban thường vụ Quốc hội", "Cơ quan ngang bộ", "Cơ quan thuộc Chính phủ"], ans: 1 },
+        { q: "Câu 49: Bộ và Cơ quan ngang Bộ là cơ quan thuộc nhóm:", opts: ["Cơ quan hành chính nhà nước", "Cơ quan xét xử", "Cơ quan quyền lực nhà nước", "Cơ quan kiểm sát"], ans: 0 },
+        { q: "Câu 50: Theo Hiến pháp Việt Nam, Quốc hội là:", opts: ["Cơ quan duy nhất trong bộ máy nhà nước trực tiếp nhận và thực hiện quyền lực...", "Cơ quan quyền lực nhà nước cao nhất...", "Cơ quan có vị trí pháp lý cao nhất trong quan hệ với các cơ quan khác", "Tất cả đều đúng"], ans: 3 }
+    ];
+
+    let questions = [];
+    let currentQIndex = 0;
+    let timerInterval;
+    let totalSeconds = 0;
+    let isTimerActive = false;
+
+    // Hiển thị/ẩn ô nhập số phút
+    function toggleTimeInput() {
+        const timerCb = document.getElementById('timer-cb');
+        const timeInputContainer = document.getElementById('time-input-container');
+        timeInputContainer.style.display = timerCb.checked ? 'block' : 'none';
+    }
+
+    // Hàm xáo trộn mảng
+    function shuffleArray(array) {
+        let newArray = [...array];
+        for (let i = newArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+        }
+        return newArray;
+    }
+
+    // Format thời gian
+    function formatTime(sec) {
+        let m = Math.floor(sec / 60).toString().padStart(2, '0');
+        let s = (sec % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
+
+    // Bắt đầu từ Màn hình cài đặt
+    function startQuiz() {
+        const isShuffle = document.getElementById('shuffle-cb').checked;
+        isTimerActive = document.getElementById('timer-cb').checked;
+        
+        // Cài đặt câu hỏi
+        questions = isShuffle ? shuffleArray(database) : [...database];
+        currentQIndex = 0;
+
+        // Cài đặt thời gian
+        if (isTimerActive) {
+            let minutes = parseInt(document.getElementById('time-input').value);
+            if (isNaN(minutes) || minutes <= 0) minutes = 15; // Mặc định 15p nếu nhập sai
+            totalSeconds = minutes * 60;
+            document.getElementById('timer').innerText = formatTime(totalSeconds);
+            startCountdown();
+        } else {
+            document.getElementById('timer').innerText = "Không giới hạn";
+        }
+
+        // Chuyển màn hình
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('quiz-box').style.display = 'block';
+        loadQuestion();
+    }
+
+    function startCountdown() {
+        timerInterval = setInterval(() => {
+            totalSeconds--;
+            document.getElementById('timer').innerText = formatTime(totalSeconds);
+            
+            if (totalSeconds <= 0) {
+                clearInterval(timerInterval);
+                endQuiz(true); // true = Hết giờ
+            }
+        }, 1000);
+    }
+
+    function loadQuestion() {
+        if (currentQIndex >= questions.length) {
+            endQuiz(false);
+            return;
+        }
+
+        const qData = questions[currentQIndex];
+        document.getElementById('progress').innerText = `Câu: ${currentQIndex + 1}/${questions.length}`;
+        document.getElementById('question-text').innerText = qData.q;
+        
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = '';
+
+        qData.opts.forEach((optText, index) => {
+            const btn = document.createElement('div');
+            btn.className = 'option';
+            btn.innerText = optText;
+            btn.onclick = () => checkAnswer(btn, index, qData.ans);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selectedBtn, selectedIndex, correctIndex) {
+        const allOptions = document.querySelectorAll('.option');
+
+        if (selectedIndex === correctIndex) {
+            selectedBtn.classList.add('correct');
+            allOptions.forEach(btn => btn.classList.add('disabled'));
+
+            setTimeout(() => {
+                currentQIndex++;
+                loadQuestion();
+            }, 1000); // Đợi 1 giây rồi qua câu
+        } else {
+            selectedBtn.classList.add('wrong');
+        }
+    }
+
+    function endQuiz(isTimeOut) {
+        clearInterval(timerInterval);
+        document.getElementById('quiz-box').style.display = 'none';
+        document.getElementById('finish-screen').style.display = 'block';
+        
+        const msgElement = document.getElementById('finish-message');
+        if (isTimeOut) {
+            msgElement.innerHTML = `<span style="color:#e74c3c; font-weight:bold;">Đã hết thời gian làm bài!</span><br>Bạn dừng lại ở câu ${currentQIndex}/${questions.length}`;
+        } else {
+            msgElement.innerHTML = `Bạn đã vượt qua toàn bộ ${questions.length} câu hỏi một cách xuất sắc!`;
+        }
+    }
+</script>
+</body>
+</html>
